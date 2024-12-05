@@ -6,7 +6,7 @@ This repository is to store all work upon, Auth Library, Documentation, Implemen
 
 ### Miles to go :
 - [x] Resource Gathering
-- [ ] Running & Understanding through [Stanford Demo](https://srp.stanford.edu/demo)
+- [x] Running & Understanding through [Stanford Demo](https://srp.stanford.edu/demo)
 - [ ] Implementation on Web Application
 - [ ] Developing auth library
 - [ ] Publishing Library Package  

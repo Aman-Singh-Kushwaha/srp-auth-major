@@ -1,0 +1,143 @@
+<!-- 
+    This is the Stanford Demo of SRP Protocol Clone at
+    https://srp.stanford.edu/demo
+
+    As the original demo isn't working (due to outdated java applet), so here is vanilla js version of implementation
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SRP Demo (Modern JavaScript)</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .section { margin-bottom: 20px; padding: 10px; border: 1px solid #ccc; }
+        table { border-collapse: collapse; }
+        td { padding: 5px; }
+        input[type="text"] { width: 300px; }
+    </style>
+    <script src="bigint-helper.js"></script>
+    <script src="srp-logic.js"></script>
+</head>
+<body>
+    <h1>SRP in JavaScript</h1>
+
+    <div class="section">
+        <h2>1. Parameters</h2>
+        Radix: 
+        <input type="radio" name="radix" value="10" checked onclick="updateDisplay()"> 10
+        <input type="radio" name="radix" value="16" onclick="updateDisplay()"> 16
+        <input type="radio" name="radix" value="64" onclick="updateDisplay()"> 64
+        <br><br>
+        Protocol: 
+        <input type="radio" name="protocol" value="3" onclick="updateK()"> SRP-3 (k=1)
+        <input type="radio" name="protocol" value="6" checked onclick="updateK()"> SRP-6 (k=3)
+        <input type="radio" name="protocol" value="6a" onclick="updateK()"> SRP-6a (k=H(N || g))
+        <br><br>
+        <table>
+            <tr>
+                <td>Modulus (N) =</td>
+                <td><input type="text" id="N" readonly></td>
+            </tr>
+            <tr>
+                <td>Generator (g) =</td>
+                <td><input type="text" id="g" readonly></td>
+            </tr>
+            <tr>
+                <td>Multiplier (k) =</td>
+                <td><input type="text" id="k" readonly></td>
+            </tr>
+        </table>
+        <br>
+        Predefined values: 
+        <select id="bits" onchange="setPredefined()">
+            <option value="256">256-bit</option>
+            <option value="512">512-bit</option>
+            <option value="640">640-bit</option>
+            <option value="768">768-bit</option>
+            <option value="1024" selected>1024-bit</option>
+        </select>
+    </div>
+
+    <div class="section">
+        <h2>2. Password Database (server-side)</h2>
+        <table>
+            <tr>
+                <td>Username:</td>
+                <td><input type="text" id="username" value="user"></td>
+            </tr>
+            <tr>
+                <td>Password (server):</td>
+                <td><input type="text" id="password" value="password"></td>
+            </tr>
+            <tr>
+                <td>Salt (s) =</td>
+                <td><input type="text" id="salt" readonly></td>
+            </tr>
+            <tr>
+              <td align="right"><i>x</i> =</td>
+              <td><i>H(salt || H(username || ":" || password))</i></td>
+            </tr>
+            <tr>
+                <td>x =</td>
+
+                <td><input type="text" id="x" readonly></td>
+            </tr>
+            <tr><td align="right"><i>Verifier (v)</i> =</td><td><i>g^x &nbsp; (mod N)</i></td></tr>
+            <tr>
+              <td align="right">=</td>
+              <td><input type="text" id="v" readonly></td>
+            </tr>
+        </table>
+        <button onclick="updateVerifier()">Update Verifier</button>
+    </div>
+
+    <div class="section">
+        <h2>3. Authentication Protocol</h2>
+        <table>
+            <tr>
+                <th>Client</th>
+                <th></th>
+                <th>Server</th>
+            </tr>
+            <tr>
+                <td>Password (client): <input type="text" id="client_password">
+                    <button onclick="authenticate()">Authenticate</button>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>a = <input type="text" id="a" readonly></td>
+                <td></td>
+                <td>b = <input type="text" id="b" readonly></td>
+            </tr>
+            <tr>
+                <td>A = <input type="text" id="A" readonly></td>
+                <td>→</td>
+                <td>B = <input type="text" id="B" readonly></td>
+            </tr>
+            <tr>
+                <td>x = <input type="text" id="client_x" readonly></td>
+                <td></td>
+                <td>u = <input type="text" id="u" readonly></td>
+            </tr>
+            <tr>
+                <td>Client S = <input type="text" id="client_S" readonly></td>
+                <td></td>
+                <td>Server S = <input type="text" id="server_S" readonly></td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="status" style="margin-top: 20px; font-weight: bold;"></div>
+
+    <script>
+        // Initialize on page load
+        window.onload = function() {
+            setPredefined();
+            updateVerifier();
+        }
+    </script>
+</body>
+</html>
