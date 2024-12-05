@@ -1,0 +1,1545 @@
+idnits 2.17.1 
+
+draft-eap-sha256-srp6a-00.txt:
+
+  Checking boilerplate required by RFC 5378 and the IETF Trust (see
+  https://trustee.ietf.org/license-info):
+  ----------------------------------------------------------------------------
+
+     No issues found here.
+
+  Checking nits according to https://www.ietf.org/id-info/1id-guidelines.txt:
+  ----------------------------------------------------------------------------
+
+     No issues found here.
+
+  Checking nits according to https://www.ietf.org/id-info/checklist :
+  ----------------------------------------------------------------------------
+
+  == There are 5 instances of lines with non-RFC6890-compliant IPv4 addresses
+     in the document.  If these are example addresses, they should be changed.
+
+
+  Miscellaneous warnings:
+  ----------------------------------------------------------------------------
+
+  == The copyright year in the IETF Trust and authors Copyright Line does not
+     match the current year
+
+  -- The document date (23 November 2022) is 743 days in the past.  Is this
+     intentional?
+
+
+  Checking references for intended status: Informational
+  ----------------------------------------------------------------------------
+
+     No issues found here.
+
+     Summary: 0 errors (**), 0 flaws (~~), 2 warnings (==), 1 comment (--).
+
+     Run idnits with the --verbose option for more detailed information about
+     the items above.
+--------------------------------------------------------------------------------
+
+
+2	Internet Engineering Task Force                              S. Ammirata
+3	Internet-Draft                                                G. Peskens
+4	Intended status: Informational                            SipRadius LLC.
+5	Expires: 27 May 2023                                           B. Gilmer
+6	                                                       J. Iacovelli, Ed.
+7	                                                    Video Services Forum
+8	                                                        23 November 2022
+
+10	                EAP SHA256-SRP6a Authentication Protocol
+11	                       draft-eap-sha256-srp6a-00
+
+13	Abstract
+
+15	   This document describes an authentication protocol intended for
+16	   Internet applications which may require a robust and non-leaky
+17	   exchange of credentials even under adverse network conditions.  The
+18	   protocol has the ability to recover from packet loss during the
+19	   authentication process, as for example, should the Internet
+20	   application use the UDP transport protocol under lossy network
+21	   conditions.  It does so by allowing the retransmission of lost
+22	   packets during authentication.  The protocol follows the Extensible
+23	   Authentication Protocol (RFC 3748 and RFC 5247) framework, which
+24	   allows for the use of multiple authentication mechanisms.  It
+25	   utilizes Secure Remote Password protocol (RFC 2945), with strong,
+26	   password-based cryptographic hashing.  It utilizes the Secure Hashing
+27	   Algorithm message digest algorithm as the hashing mechanism.  The
+28	   authentication protocol allows for one Server and one or more
+29	   Clients.  Where multiple Clients exist, each may communicate only
+30	   with the Server.  Clients initiate the authentication exchange
+31	   process.  Until the authentication completes successfully, the Server
+32	   and Client ignore/discard any packets except those supporting the
+33	   authentication process.  The authentication algorithm is based on a
+34	   username/password or passphrase pair.  These are used to generate
+35	   secure ephemeral keys.  The Server has a store of all valid usernames
+36	   and password hashes.  Each Client stores its own username and
+37	   password.  The authentication algorithm provides for each side to
+38	   prove to the other that it has a valid username/password or
+39	   passphrase pair, in a way that a third-party monitoring the
+40	   transactions could not use intercepted information to later
+41	   successfully authenticate.  This mutual authentication exchange
+42	   consists of several pairs of interactions.  The first is a request
+43	   for authentication by the Client, containing the Client name, to
+44	   which the Server responds with a challenge for its identity.  The
+45	   Client responds with the Server name for verification purposes.
+46	   Thereafter, Client and Server each exchange three values consisting
+47	   of password salts, ephemeral public keys, and hash values.  These are
+48	   generated and verified by Client and Server in accordance with SRP
+49	   against the stored password/passphrase hashes.  While any step in the
+50	   process may be repeated to provide for dropped packets should a
+51	   response not be received, the authentication process is terminated by
+52	   any incorrect value received in any response.  Multicast UDP
+53	   authentication is also supported, with certain limitations.
+
+55	Status of This Memo
+
+57	   This Internet-Draft is submitted in full conformance with the
+58	   provisions of BCP 78 and BCP 79.
+
+60	   Internet-Drafts are working documents of the Internet Engineering
+61	   Task Force (IETF).  Note that other groups may also distribute
+62	   working documents as Internet-Drafts.  The list of current Internet-
+63	   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+65	   Internet-Drafts are draft documents valid for a maximum of six months
+66	   and may be updated, replaced, or obsoleted by other documents at any
+67	   time.  It is inappropriate to use Internet-Drafts as reference
+68	   material or to cite them other than as "work in progress."
+
+70	   This Internet-Draft will expire on 27 May 2023.
+
+72	Copyright Notice
+
+74	   Copyright (c) 2022 IETF Trust and the persons identified as the
+75	   document authors.  All rights reserved.
+
+77	   This document is subject to BCP 78 and the IETF Trust's Legal
+78	   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+79	   license-info) in effect on the date of publication of this document.
+80	   Please review these documents carefully, as they describe your rights
+81	   and restrictions with respect to this document.  Code Components
+82	   extracted from this document must include Revised BSD License text as
+83	   described in Section 4.e of the Trust Legal Provisions and are
+84	   provided without warranty as described in the Revised BSD License.
+
+86	Table of Contents
+
+88	   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   3
+89	   2.  Requirements Language . . . . . . . . . . . . . . . . . . . .   4
+90	   3.  Protocol Encapsulation  . . . . . . . . . . . . . . . . . . .   4
+91	     3.1.  Layer-2 Encapsulation . . . . . . . . . . . . . . . . . .   4
+92	     3.2.  Layer-3 Encapsulation Using GRE . . . . . . . . . . . . .   5
+93	     3.3.  Layer-4 Encapsulation Using GRE Over UDP  . . . . . . . .   5
+94	   4.  Description of the EAP SHA256-SRP6a Authentication
+95	           Protocol  . . . . . . . . . . . . . . . . . . . . . . . .   6
+96	     4.1.  Authentication Algorithm and Protocol . . . . . . . . . .   6
+97	     4.2.  Packet Formats  . . . . . . . . . . . . . . . . . . . . .   9
+98	       4.2.1.  EAP Encapsulation . . . . . . . . . . . . . . . . . .  10
+99	       4.2.2.  EAPoL Type 0 Packet Format  . . . . . . . . . . . . .  10
+100	       4.2.3.  Request and Response Packets  . . . . . . . . . . . .  12
+101	       4.2.4.  EAP SRP-SHA256 Packet Formats . . . . . . . . . . . .  13
+102	     4.3.  Protocol Exchanges  . . . . . . . . . . . . . . . . . . .  22
+103	     4.4.  Re-Authentication . . . . . . . . . . . . . . . . . . . .  24
+104	     4.5.  UDP Transport Considerations  . . . . . . . . . . . . . .  25
+105	     4.6.  Multicast Authentication (Informative)  . . . . . . . . .  26
+106	     4.7.  Multi-Link Operation  . . . . . . . . . . . . . . . . . .  27
+107	     4.8.  Authentication Example  . . . . . . . . . . . . . . . . .  28
+108	   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .  31
+109	   6.  Internationalization Considerations . . . . . . . . . . . . .  31
+110	   7.  Security Considerations . . . . . . . . . . . . . . . . . . .  31
+111	   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .  31
+112	     8.1.  Normative References  . . . . . . . . . . . . . . . . . .  31
+113	     8.2.  Informative References  . . . . . . . . . . . . . . . . .  32
+114	   Acknowledgements  . . . . . . . . . . . . . . . . . . . . . . . .  32
+115	   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .  32
+
+117	1.  Introduction
+
+119	   The method described in this document is designed for network
+120	   applications desiring an authentication protocol in which a robust,
+121	   mutual, and non-leaky exchange of credentials is required.
+
+123	   For each authentication instance, the model is as follows:
+
+125	      There is one Server and one or more Clients.
+
+127	      There is a username and password for each Client.  These are known
+128	      to both the Server and the Client and configured through out-of-
+129	      band means.
+
+131	      The protocol provides a secure way for the Client and the Server
+132	      to prove to each other that they know the correct username and
+133	      password without any additional previous information or setup.
+134	      Moreover, a third party observing the traffic cannot obtain the
+135	      password nor successfully authenticate by replaying the traffic.
+
+137	      Clients shall only communicate with the Server.
+
+139	      The Clients shall initiate the communication with the Server by
+140	      following the steps in section 3.3.
+
+142	      The Server shall initiate the authentication protocol.
+
+144	      The Server and Clients shall not send, receive or process any
+145	      communication other than the steps described in section 4.3 until
+146	      the mutual authentication completes successfully.
+
+148	2.  Requirements Language
+
+150	   This document is consistent with RFC 2119 Internet Best Current
+151	   Practices regarding key words for use in RFCs to indicate
+152	   requirements levels.
+
+154	3.  Protocol Encapsulation
+
+156	   The packets described in this document are EAP packets, encapsulated
+157	   using EtherType 0x888E.  This section describes three encapsulation
+158	   methods for the EAP packets, as follows:
+
+160	      A Layer-2 encapsulation method, where server and clients are in
+161	      the same local network.
+
+163	      A Layer-3 encapsulation method over IP, where server and clients
+164	      can be in different networks.
+
+166	      A Layer-4 encapsulation method over UDP/IP, where multiple server
+167	      instances can be running in the same host.  If there are firewalls
+168	      between server and clients, this method simplifies the
+169	      configuration of such firewalls.
+
+171	3.1.  Layer-2 Encapsulation
+
+173	   When using Layer-2 Encapsulation, the EAP packets described in this
+174	   document are encapsulated in Ethernet packets with EtherType 0x888E,
+175	   as shown in Figure A.
+
+177	   Figure A: Layer-2 Encapsulation
+
+179	   :0                   1                   2                   3
+180	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+181	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+182	   |                                                               |
+183	   |    Destination MAC Address    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+184	   |                               |                               |
+185	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+       Source MAC Address      |
+186	   |                                                               |
+187	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+188	   |       Ethertype=0x888E        |                               |
+189	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+           EAP Packet          |
+190	   :                                                               :
+191	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+193	3.2.  Layer-3 Encapsulation Using GRE
+
+195	   When using Layer-3 Encapsulation, the EAP packets described in this
+196	   document are encapsulated using GRE over IP as per RFC 2784 [RFC2784]
+197	   as shown in Figure B.  Packet encryption shall not be used.
+
+199	   Figure B: Layer-3 Encapsulation
+
+201	   :0                   1                   2                   3
+202	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+203	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+204	   :               IP Header with Protocol=47 (GRE)                :
+205	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+206	   :             GRE Header with Protocol Type = 0x888E            :
+207	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+208	   :                           EAP Packet                          :
+209	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+211	3.3.  Layer-4 Encapsulation Using GRE Over UDP
+
+213	   When using Layer-4 Encapsulation, the EAP packets described in this
+214	   document are encapsulated using GRE over UDP as per [RFC8086], with
+215	   the following modifications:
+
+217	      Packets shall not be encrypted.
+
+219	      There is no restriction on what UDP ports are used by the server.
+
+221	   The encapsulation is shown in Figure C.
+
+223	   Figure C: Layer-4 Encapsulation
+
+225	   :0                   1                   2                   3
+226	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+227	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+228	   :               IP Header with Protocol=17 (UDP)                :
+229	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+230	   :                           UDP Header                          :
+231	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+232	   :             GRE Header with Protocol Type = 0x888E            :
+233	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+234	   :                           EAP Packet                          :
+235	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+237	4.  Description of the EAP SHA256-SRP6a Authentication Protocol
+
+239	4.1.  Authentication Algorithm and Protocol
+
+241	   Fundamentally, the authentication algorithm is based on a username/
+242	   password pair.  The Server has a list of all the usernames and
+243	   passwords (in a secure format); an authorized Client knows its
+244	   username and password as well.  The authentication algorithm provides
+245	   a secure way for the Client to prove to the Server that it knows a
+246	   valid username/password pair, in a way that a third-party monitoring
+247	   the transactions cannot use the information exchanged to later
+248	   successfully login to the Server.  It also provides a secure way for
+249	   the Client to authenticate the Server.  Finally, the algorithm also
+250	   generates a common strong ephemeral shared key that may be used to
+251	   encrypt future unicast communication between the authenticated Client
+252	   and the Server.
+
+254	   The algorithm is based on two fundamental values, the generator value
+255	   "g" and the prime modulus "N".  The Server may use different values
+256	   of "g" and "N" per Client, since these values are communicated to the
+257	   Client at the beginning of the negotiation.  The following rules
+258	   shall be observed:
+
+260	      As indicated in section 4.2.4.1, if "g" is not indicated, the
+261	      Client shall assume the default value of 2.
+
+263	      "N" shall be a large safe prime, of at least 512 bits.  If "N" is
+264	      not indicated, the Client shall assume the default 2048-bit value
+265	      indicated in section 4.2.4.1.
+
+267	      The value "g" shall not be higher than "N".
+
+269	   In the algorithm description below, the following operations are
+270	   used:
+
+272	   % Modulo operator (as in the C programming language); the remainder
+273	   of a division.  The notation x % y shall indicate the remainder of
+274	   the division of "x" by "y".
+
+276	   ^ Modulo "N" exponentiation.  The notation x ^ y shall indicate the
+277	   remainder of "x" to the power "y" when divided by the prime modulus
+278	   "N".  Example:
+279	   x = 2
+280	   y = 10
+281	   N = 263
+282	   x^y = (2^10) modulo 263 = 1024 modulo 263 = 235 (remainder of
+283	   1024/263)
+284	   | String concatenation.  This operator creates a string that is a
+285	   concatenation of its two arguments, in the same manner as the
+286	   "strcat" function in a standard C library.
+
+288	   The algorithm shall use the SHA256 hashing algorithm.  If multiple
+289	   arguments are provided to the SHA256 function, this indicates that
+290	   the arguments shall be concatenated, and the SHA256 function applied
+291	   to the combined value.  For example, SHA256(x, y) means "create a
+292	   buffer with the contents of "x", followed by the contents of "y", and
+293	   apply the SHA256 algorithm to the resulting buffer".  When the SHA256
+294	   hash is applied to a string, the null terminator (if present) shall
+295	   not be included in the hash computation.
+
+297	   For each Client, the Server shall select a random salt "s",
+298	   containing at least four octets.  If the Client password is denoted
+299	   by "P" and the Client username by "I", the separator character being
+300	   ":", use of said character shall be disallowed for use in "P" or "I".
+301	   The Server shall compute the value "x" defined by:
+
+303	   x = SHA256(s, SHA256(I | ":" | P))
+
+305	   For each Client, the Server shall compute the password verifier "v"
+306	   as follows:
+
+308	   v = g^x
+
+310	   The Server shall store the values "s" and "v" for each Client,
+311	   indexed by the Client username "I".  The Server should not store the
+312	   cleartext password "P".
+
+314	   The Client starts the authentication process by contacting the Server
+315	   using the EAPoL-Start message of section 4.2.1 (or any empty message,
+316	   such as a keep-alive).  The Server requests the Client username "I"
+317	   using the Identity Request message of section 4.2.3.1, and the Client
+318	   returns this information using the Identity Response message of
+319	   section 4.2.3.1.
+
+321	   If the username "I" is known to the Server, the Server sends the
+322	   corresponding "s", "g" and "N" values to the Client using the
+323	   Challenge Request Packet of section 4.2.4.1.  If the Client's
+324	   username is not known to the Server, it may abort at this point or
+325	   continue with fake values for "s", "g" and "N".  This is described in
+326	   detail in section 4.2.4.1.
+
+328	   Upon reception of the Challenge Request Packet, the Client caches the
+329	   "s", "g", and "N" values, and generates a random number "a" between 1
+330	   and N-1.  It then computes the value "A" as follows:
+
+332	   A = g^a
+
+334	   The value "A" is returned to the Server in the Client Key Response
+335	   Packet of section 4.2.4.2.  The Server caches this value for later
+336	   use.  Upon reception of the Client Key Response, the Server generates
+337	   a random number "b" between 1 and N-1, and computes the value "B" as
+338	   follows:
+
+340	   k = SHA256(N, g)
+341	   B = (kv + g^b) % N
+
+343	   The value "B" is returned to the Client in the Server Key Request
+344	   Packet of section 4.2.4.3.  Upon receiving the value "B", the Client
+345	   performs the following computations:
+
+347	   u = SHA256(A, B)
+348	   x = SHA256(s, SHA256(I, ":", P))
+349	   k = SHA256(N, g)
+350	   S = ((B - kg^x) ^ (a +ux)) % N
+351	   K = SHA256(S)
+352	   M1 = SHA256(SHA256(N) xor SHA256(g), SHA256(I, s, A, B, K))
+
+354	   The value "M1" above is returned to the Server in the Client
+355	   Validator Response Packet from section 4.2.4.4, and the Client caches
+356	   the session key "K".
+
+358	   Upon receiving the "M1" value, the Server performs the following
+359	   computations:
+
+361	   u = SHA256(A, B)
+362	   S = ((Av^u) ^ b) % N
+363	   K = SHA256(S)
+364	   M1 = SHA256(SHA256(N) xor SHA256(g), SHA256(I, s, A, B, K))
+
+366	   If the local "M1" calculation yields the same value as the received
+367	   "M1" value, the Server shall consider the Client as authenticated.
+368	   The Server computes the value "M2" as follows:
+
+370	   M2 = SHA256(A, M1, K)
+
+372	   The "M2" value is returned to the Client using the Server Validator
+373	   Request Packet from section 4.2.4.5.  Upon receiving this packet, the
+374	   Client performs the same computation, and if the local calculation
+375	   yields the same "M2" value as the received packet, the Client shall
+376	   consider the Server authenticated.
+
+378	4.2.  Packet Formats
+
+380	   This section describes the various packet formats used in the
+381	   authentication process.  The packet formats in the illustration
+382	   follow a hierarchical structure based on GRE-encapsulated EAPoL
+383	   packets.  The hierarchy is depicted in Figure 1.  The boxed items in
+384	   Figure 1 represent the actual packets transmitted in the network at
+385	   the various phases of the protocol and are documented in this
+386	   section.  All protocol transactions shall use unicast addressing
+387	   between Server and Client.
+
+389	   Figure 1: Authentication Packet Format Hierarchy
+
+391	   :                +------------+
+392	   :                |EAPoL Packet|
+393	   :                +------------+
+394	   :               /      |       \
+395	   :              /       |        \
+396	   :+------------+   +------------+   +------------+
+397	   :|  Start     |   |  Logoff    |   | EAP Packet |
+398	   :+------------+   +------------+   +------------+
+399	   :                                 /  /    |      \
+400	   :                 ---------------   /     |       \
+401	   :               /                  /      |        \
+402	   :   +------------+  +------------+        |         \
+403	   :   |  Success   |  |  Failure   |        |          \
+404	   :   +------------+  +------------+  +------------+  +------------+
+405	   :                                   |  Request   |  | Response   |
+406	   :                                   +------------+  +------------+
+407	   :                                         |        /
+408	   :                                         |       /
+409	   :                                  ---------------
+410	   :                                /        |        \
+411	   :                     +---------+ +---------------+ +------------+
+412	   :                     |  NAK    | |EAP SRP SHA256 | |  IDENTITY  |
+413	   :                     +---------+ +---------------+ +------------+
+414	   :                                       |                        |
+415	   :                                       |                        |
+416	   :                    +------------------+     +------------------+
+417	   :                    |    CHALLENGE     |     |   CLIENT KEY     |
+418	   :                    +------------------+     +------------------+
+419	   :                                       |                        |
+420	   :                    +------------------+     +------------------+
+421	   :                    |   SERVER KEY     |     | CLIENT VALIDATOR |
+422	   :                    +------------------+     +------------------+
+423	   :                                       |                        |
+424	   :                    +------------------+                        |
+425	   :                    | SERVER VALIDATOR |                        |
+426	   :                    +------------------+                        |
+427	   :                                       |                        |
+428	   :                    +------------------+     +------------------+
+429	   :                    |    PASSPHRASE    |     |   PASSPHRASE     |
+430	   :                    +------------------+     +------------------+
+
+432	4.2.1.  EAP Encapsulation
+
+434	   Figure 2 shows the authentication packet format.
+
+436	   Figure 2: Authentication Packet Format
+
+438	   :0                   1                   2                   3
+439	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+440	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+441	   | EAP Version=3 |  EAPoL Type   |        Payload Length         |
+442	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+443	   :                 Packet Payload (EAPoL Type=0)                 :
+444	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+446	   The fields in Figure 2 are to be set as follows:
+
+448	      EAP Version (8 bits): this field shall be set to "3" to indicate
+449	      compliance with this Specification.
+
+451	      EAPoL Type (8 bits): set this field as follows:
+452	      0x00: EAPoL-EAP: the packet payload field contains an EAP packet.
+453	      0x01: EAPoL-Start: optional packet sent by the Client to initiate
+454	      the authentication process with the Server.  EAPoL-Start packets
+455	      do not have a payload field.
+456	      0x02: EAPoL-Logoff: optional packet sent before closing the
+457	      connection, to revert to the non-authenticated state.  This packet
+458	      can be sent by either Server or Client.  EAPoL-Logoff packets do
+459	      not have a payload field.
+460	      0x03-0xFF: Reserved.  Receivers shall silently discard packets
+461	      with these types.
+
+463	      Payload Length (16 bits): set this field to the length, in bytes,
+464	      of the Packet Payload field.  For EAPoL-Start and EAPoL-Logoff
+465	      packets, which have no payload, set this field to "0" zero for
+466	      those two packet types.
+
+468	4.2.2.  EAPoL Type 0 Packet Format
+
+470	   Figure 3 shows the packet payload format for EAPoL Type 0.
+
+472	   Figure 3: Packet Payload for EAPoL Type=0
+473	   :0                   1                   2                   3
+474	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+475	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+476	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+477	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+478	   |     Code      |  Identifier   |            Length             |
+479	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+480	   | Data (variable, depends on Code)  ...
+481	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+483	   Set the fields in Figure 3 as follows:
+
+485	   Code (8 bits): set this field to identify the type of EAP packet, as
+486	   follows:
+487	   0x01: Request
+488	   0x02: Response
+489	   0x03: Success
+490	   0x04: Failure
+491	   All other values: reserved.  Receivers shall silently discard packets
+492	   with these values.
+
+494	   Identifier (8 bits): this field is used to match responses with
+495	   requests.  The initial request shall select an arbitrary value for
+496	   the request packet.  The response shall use the same value in the
+497	   response to that request, which may be a Response packet, a Success
+498	   packet, or a Failure packet.  The identifier shall be incremented by
+499	   one at every new request message.  It shall not be changed on a
+500	   retransmission of a message.  Any non-matching Response messages
+501	   shall be discarded.  As indicated in section 4, a full authentication
+502	   exchange includes up to four distinct packets originated by the
+503	   authentication Server.  The authentication Server shall use four
+504	   consecutive values for the Identifier field for full protocol
+505	   exchange.  Successive protocol exchanges for the same connection
+506	   (identified by Client IP address and source UDP port) shall use non-
+507	   overlapping Identifier values.  Since the Identifier field is only 8
+508	   bits, the value 0x00 is deemed to follow the value 0xFF.
+
+510	   Length (16 bits): set this field to the length of the EAP packet,
+511	   including the Code, Identifier, Length and the variable-size data.
+512	   If the overall packet is longer than what is indicated by the length
+513	   field, additional octets shall be ignored.  If the overall packet is
+514	   truncated (i.e., not enough octets received to satisfy the length
+515	   field), the packet shall be discarded.
+
+517	   Data (variable): the data field is zero or more octets.  The size and
+518	   format of the data field depends on the Code field, as described
+519	   below.
+
+521	4.2.3.  Request and Response Packets
+
+523	   Figure 4 shows the packet payload format for Request (Code=0x01) and
+524	   Response (Code=0x02) packets.
+
+526	   Figure 4: Packet Payload Format for Request/Response Packets
+
+528	   :0                   1                   2                   3
+529	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+530	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+531	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+532	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+533	   |  Code=1 or 2  |  Identifier   |            Length             |
+534	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+535	   |     Type      | Type-Data (variable, depends on Type) ...
+536	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+
+538	   Set the fields in Figure 4 as follows:
+
+540	   Type (8 bits): the Type field shall indicate the format of the
+541	   messages used in the Request/Response exchanges.  The following
+542	   values are defined in this document:
+
+544	   0x01: Identity
+545	   0x03: Nak (only valid for Response packets, shall not be sent on
+546	   Request packets)
+547	   0x13: EAP SRP-SHA256
+548	   All other values reserved.
+
+550	   Type-Data (variable): set this field depending on the Type value, as
+551	   documented below.
+
+553	4.2.3.1.  Identity Request/Response Packets
+
+555	   Identity Request packets are sent from the Server to the Client.
+556	   Upon reception of the Identity request packet, the Client shall
+557	   answer with the Identity Response packet.  In the Identity Request
+558	   packet, the Server may include a displayable message in the Type-Data
+559	   field.  The Client shall return its identity as a string (typically
+560	   the Username) in the Type-Data field.  Strings shall not be null-
+561	   terminated.
+
+563	   Figure 5: Identity Packets
+
+565	   :0                   1                   2                   3
+566	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+567	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+568	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+569	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+570	   |  Code=1 or 2  |  Identifier   |            Length             |
+571	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+572	   |   Type=0x01   | Message for Code=1, Username for Code=2
+573	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+575	4.2.3.2.  Nak Response Packets
+
+577	   Nak Response Packets shall be sent in response to any unknown or
+578	   unsupported requests.  The Type-Data field shall be set to one octet
+579	   with value 0x13, to indicate that only EAP SRP-SHA256 authentication
+580	   is supported.  The Nak response packet is shown in Figure 6.
+
+582	   Figure 6: Nak Response Packet
+
+584	   :0                   1                   2                   3
+585	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+586	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+587	   | EAP Version=3 | EAPoL Type=0  |       Payload Length=6        |
+588	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+589	   |    Code=2     |  Identifier   |           Length=6            |
+590	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+591	   |   Type=0x03   |   Data=0x13   |
+592	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+594	4.2.4.  EAP SRP-SHA256 Packet Formats
+
+596	   Figure 7 shows the packet formats for the EAP SRP-SHA256 packets.
+
+598	   Figure 7: EAP SRP-SHA256 Packet Formats
+
+600	   :0                   1                   2                   3
+601	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+602	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+603	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+604	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+605	   |  Code=1 or 2  |  Identifier   |            Length             |
+606	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+607	   |   Type=0x13   |    Subtype    |                               :
+608	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   Subtype-Data (variable)     :
+609	   :                                                               :
+610	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+612	   Set the fields in Figure 7 as follows:
+
+614	   Subtype (8 bits): the subtype field shall be set to one of the
+615	   following values:
+
+617	   0x01: Challenge / Client Key
+
+619	   0x02: Server Key / Client Validator
+
+621	   0x03: Server Validator
+
+623	   0x10: Passphrase Request / Response
+
+625	   All other values reserved.  If a device receives an unknown subtype,
+626	   it shall respond with a packet of Type Nak.
+
+628	   Subtype Data (variable): set this field depending on the Type and
+629	   Subtype values, as documented below.
+
+631	4.2.4.1.  EAP SRP-SHA256 Challenge Request Packet
+
+633	   The EAP SRP-SHA256 Challenge is a Request packet sent from the Server
+634	   to the Client once the username has been received from the Client.
+635	   It includes the unauthenticated Server name for verification
+636	   purposes, the password salt "s", the generator value "g", and the
+637	   prime modulus "N".  The packet format is shown in Figure 8.
+
+639	   Figure 8: EAP SRP-SHA256 Challenge Packet
+
+641	   :0                   1                   2                   3
+642	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+643	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+644	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+645	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+646	   |    Code=1     |  Identifier   |            Length             |
+647	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+648	   |   Type=0x13   |  Subtype=0x01 |  Name Length  |Name (variable):
+649	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+650	   |  Salt Length  |    Salt (variable) ...
+651	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+652	   |  Gen Length   |    Generator (variable) ...
+653	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+654	   |  Prime Modulus (variable) ...
+655	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+657	   Set the fields in the packet in Figure 8 as follows:
+
+659	      Name Length (8 bits): a single octet giving the length of the Name
+660	      field in octets.
+
+662	      Name (variable): the Server name.  This field is not
+663	      authenticated.  The Server name may be used by the Client in an
+664	      implementation-dependent manner.  It shall not be treated by the
+665	      Client as an authenticated name.
+
+667	      Salt Length (8 bits): a single octet giving the length of the Salt
+668	      field in octets.  The Salt Length shall be at least 4 octets and
+669	      may be any length up to 255 octets.
+
+671	      Salt (variable): password salt; may contain any values.  The
+672	      contents of this field shall correspond to "s" in the SRP
+673	      algorithm.
+
+675	      Gen Length (8 bits): a single octet giving the length of the
+676	      Generator field in octets.  If this field has the value zero, the
+677	      default generator value of 2 shall be used and the Generator field
+678	      shall not be present.
+
+680	      Generator (variable): the Generator value, called "g" in the SRP
+681	      algorithm, is in network byte order.  If the Gen Length field is
+682	      zero, then the Generator field shall be omitted, and "g" shall be
+683	      set to 2.
+
+685	      Prime Modulus (variable): the Prime Modulus value, called "N" in
+686	      the SRP algorithm, is in network byte order and fills the rest of
+687	      the message to the length specified by the Length field in the EAP
+688	      header.  If the Gen Length field is zero, the Prime Modulus field
+689	      may be omitted to select the default "N" value listed below.  If
+690	      the Prime Modulus field is present, then it should be at least 64
+691	      octets (512 bits).  Longer values are recommended.
+
+693	   If the Prime Modulus field in Figure 8 is empty, the Client shall
+694	   assume the value below for value "N".  In this case, the Gen Length
+695	   value shall be zero and the Generator value shall be assumed as "2".
+696	   The value for "N" is:
+
+698	   0xAC, 0x6B, 0xDB, 0x41, 0x32, 0x4A, 0x9A, 0x9B, 0xF1, 0x66, 0xDE,
+699	   0x5E, 0x13, 0x89, 0x58, 0x2F, 0xAF, 0x72, 0xB6, 0x65, 0x19, 0x87,
+700	   0xEE, 0x07, 0xFC, 0x31, 0x92, 0x94, 0x3D, 0xB5, 0x60, 0x50, 0xA3,
+701	   0x73, 0x29, 0xCB, 0xB4, 0xA0, 0x99, 0xED, 0x81, 0x93, 0xE0, 0x75,
+702	   0x77, 0x67, 0xA1, 0x3D, 0xD5, 0x23, 0x12, 0xAB, 0x4B, 0x03, 0x31,
+703	   0x0D, 0xCD, 0x7F, 0x48, 0xA9, 0xDA, 0x04, 0xFD, 0x50, 0xE8, 0x08,
+704	   0x39, 0x69, 0xED, 0xB7, 0x67, 0xB0, 0xCF, 0x60, 0x95, 0x17, 0x9A,
+705	   0x16, 0x3A, 0xB3, 0x66, 0x1A, 0x05, 0xFB, 0xD5, 0xFA, 0xAA, 0xE8,
+706	   0x29, 0x18, 0xA9, 0x96, 0x2F, 0x0B, 0x93, 0xB8, 0x55, 0xF9, 0x79,
+707	   0x93, 0xEC, 0x97, 0x5E, 0xEA, 0xA8, 0x0D, 0x74, 0x0A, 0xDB, 0xF4,
+708	   0xFF, 0x74, 0x73, 0x59, 0xD0, 0x41, 0xD5, 0xC3, 0x3E, 0xA7, 0x1D,
+709	   0x28, 0x1E, 0x44, 0x6B, 0x14, 0x77, 0x3B, 0xCA, 0x97, 0xB4, 0x3A,
+710	   0x23, 0xFB, 0x80, 0x16, 0x76, 0xBD, 0x20, 0x7A, 0x43, 0x6C, 0x64,
+711	   0x81, 0xF1, 0xD2, 0xB9, 0x07, 0x87, 0x17, 0x46, 0x1A, 0x5B, 0x9D,
+712	   0x32, 0xE6, 0x88, 0xF8, 0x77, 0x48, 0x54, 0x45, 0x23, 0xB5, 0x24,
+713	   0xB0, 0xD5, 0x7D, 0x5E, 0xA7, 0x7A, 0x27, 0x75, 0xD2, 0xEC, 0xFA,
+714	   0x03, 0x2C, 0xFB, 0xDB, 0xF5, 0x2F, 0xB3, 0x78, 0x61, 0x60, 0x27,
+715	   0x90, 0x04, 0xE5, 0x7A, 0xE6, 0xAF, 0x87, 0x4E, 0x73, 0x03, 0xCE,
+716	   0x53, 0x29, 0x9C, 0xCC, 0x04, 0x1C, 0x7B, 0xC3, 0x08, 0xD8, 0x2A,
+717	   0x56, 0x98, 0xF3, 0xA8, 0xD0, 0xC3, 0x82, 0x71, 0xAE, 0x35, 0xF8,
+718	   0xE9, 0xDB, 0xFB, 0xB6, 0x94, 0xB5, 0xC8, 0x03, 0xD8, 0x9F, 0x7A,
+719	   0xE4, 0x35, 0xDE, 0x23, 0x6D, 0x52, 0x5F, 0x54, 0x75, 0x9B, 0x65,
+720	   0xE3, 0x72, 0xFC, 0xD6, 0x8E, 0xF2, 0x0F, 0xA7, 0x11, 0x1F, 0x9E,
+721	   0x4A, 0xFF, 0x73
+
+723	4.2.4.2.  EAP SRP-SHA256 Client Key Response Packet
+
+725	   The EAP SRP-SHA256 Client Key is a Response packet sent by the Client
+726	   in response the Challenge packet described in section 4.2.4.1.  The
+727	   packet format is shown in Figure 9.
+
+729	   Figure 9: EAP SRP-SHA256 Client Key Packet Format
+
+731	   :0                   1                   2                   3
+732	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+733	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+734	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+735	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+736	   |    Code=2     |  Identifier   |            Length             |
+737	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+738	   |   Type=0x13   |  Subtype=0x01 | Value A (variable) ...
+739	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+741	   The Client shall set the fields in Figure 9 as follows:
+
+743	   Value A (variable): the result of g^a, where "a" is a randomly chosen
+744	   number in the range 1 ..  N (exclusive), as described in section 4.1.
+745	   The randomly chosen number is the Client's private key, and the Value
+746	   A field is the corresponding public key.  This field shall be in
+747	   network byte order and shall not be padded.  The "A" value shall not
+748	   be zero modulo N.  If the Server receives a bad value for this field,
+749	   it shall send a Failure packet described in section 4.2.5 and shall
+750	   disconnect the link.
+
+752	4.2.4.3.  EAP SRP-SHA256 Server Key Request Packet
+
+754	   The EAP SRP-SHA256 Server Key is a Request packet sent by the Server
+755	   after it has received the Client Key packet described in section
+756	   4.2.4.2.  The packet format is shown in Figure 10.
+
+758	   Figure 10: EAP SRP-SHA256 Server Key Packet Format
+
+760	   :0                   1                   2                   3
+761	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+762	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+763	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+764	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+765	   |    Code=1     |  Identifier   |            Length             |
+766	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+767	   |   Type=0x13   |  Subtype=0x02 | Value B (variable) ...
+768	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+770	   The fields in Figure 10 shall be set as follows:
+
+772	   Value B (variable): the result of (kv + g^b) % N, where "b" is a
+773	   randomly chosen number in the range 1 .. N (exclusive), "v" is the
+774	   stored verifier from the authentication database, and k=SHA256(N, g),
+775	   as described in section 3.1.  The randomly chosen number is the
+776	   Server's private key, and the Value B field is the corresponding
+777	   public key.  This field shall be in network byte order and shall not
+778	   be padded.  The B value shall not be zero modulo N.  If the Client
+779	   receives a bad value for this field, it shall send a Failure packet
+780	   described in section 4.2.5 and shall disconnect the link.
+
+782	4.2.4.4.  EAP SRP-SHA256 Client Validator Response Packet
+
+784	   The EAP SRP-SHA256 Client Validator is a Response packet sent by the
+785	   Client in response to the Server Key packet described in section
+786	   4.2.4.5.  The packet format is shown in Figure 11.
+
+788	   Figure 11: EAP SRP-SHA256 Client Validator Packet Format
+
+790	   :0                   1                   2                   3
+791	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+792	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+793	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+794	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+795	   |    Code=2     |  Identifier   |            Length             |
+796	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+797	   |   Type=0x13   |  Subtype=0x02 |            Reserved1          |
+798	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+799	   |           Reserved2         |U| Value M1 (32 octets) ...
+800	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+802	   The Client shall set the fields in Figure 11 as follows:
+
+804	      Reserved1 (16 bits), Reserved2 (15 bits): the Client shall set
+805	      these bits to zero on transmission, and the Server shall ignore
+806	      them on reception.
+
+808	      U (1 bit): the Client shall set this bit to signal to the Server
+809	      that it intends to use the derived key K (see section 4.1 and the
+810	      M1 computation below) as the PSK passphrase.  If this bit is set,
+811	      the Server shall use K as the passphrase to decrypt the traffic
+812	      received from the Client.
+
+814	      M1 (32 octets): the 32 octet values are calculated as follows (see
+815	      section 3.1): x = SHA256(s, SHA256(I | ":" | P))
+816	      u = SHA256(A, B)
+817	      S = ((B - kg^x) ^ (a +ux)) % N
+818	      K = SHA256(S)
+819	      M1 = SHA256(SHA256(N) xor SHA256(g), SHA256(I, s, A, B, K))
+
+821	   Upon reception of the Client Validator response, the Server shall
+822	   compute the M1 value and check against the value that is received
+823	   from the Client.  If the value matches, the Client is deemed
+824	   authenticated and the Server sends the Server Validator Request
+825	   packet described in section 4.2.4.5.  If the M1 value does not match,
+826	   authentication has failed.  The Server shall send the Failure packet
+827	   described in section 4.2.5 and shall disconnect the link.
+
+829	4.2.4.5.  EAP SRP-SHA256 Server Validator Request Packet
+
+831	   The EAP SRP-SHA256 Server Validator is a Request packet sent by the
+832	   Server in response to the Client Validator packet described in
+833	   section 4.2.4.4.  The packet format is shown in Figure 12.
+
+835	   Figure 12: EAP SRP-SHA256 Server Validator Packet Format
+
+837	   :0                   1                   2                   3
+838	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+839	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+840	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+841	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+842	   |    Code=1     |  Identifier   |            Length             |
+843	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+844	   |   Type=0x13   |  Subtype=0x03 |            Reserved1          |
+845	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+846	   |           Reserved2         |U| Value M2 (32 octets) ...
+847	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+849	   The Server shall set the fields in Figure 12 as follows:
+
+851	      Reserved1 (16 bits), Reserved2 (15 bits): the Server shall set
+852	      these bits to zero on transmission, and the Client shall ignore
+853	      them on reception.
+
+855	      U (1 bit): the Server shall set this bit to signal to the Client
+856	      that it intends to use the derived key K (see section 4.1 and the
+857	      M2 computation below) as the PSK passphrase.  If this bit is set,
+858	      the Client shall use K as the passphrase to decrypt the subsequent
+859	      traffic received from the Server.
+
+861	      M2 (32 octets): the 32 octet values are calculated as follows:
+862	      u = SHA256(A, B)
+863	      S = ((Av^u) ^ b) % N
+864	      K = SHA256(S)
+865	      M2 = SHA256(A, M1, K)
+
+867	   Upon reception of the Server Validator request, the Client shall
+868	   compute the M2 value and check against what was received from the
+869	   Server.  If the value matches, the Server is deemed authenticated and
+870	   the Client shall send the Success packet described in section 4.2.5
+871	   and the authentication process is complete.  If the M2 value does not
+872	   match, authentication has failed.  The Client shall send the Failure
+873	   packet described in section 4.2.5 and shall disconnect the link.
+
+875	4.2.4.6.  EAP SRP-SHA256 Passphrase Request Packet
+
+877	   The EAP SRP-SHA256 Passphrase Request packet is used to request the
+878	   passphrase currently in use.  This packet may be used by the Client
+879	   and/or the Server, as different passphrases may be in use on either
+880	   communication direction.  The packet format is shown in Figure 13.
+
+882	   Figure 13: EAP SRP-SHA256 Passphrase Request Packet
+
+884	   :0                   1                   2                   3
+885	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+886	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+887	   | EAP Version=3 | EAPoL Type=0  |       Payload Length=6        |
+888	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+889	   |    Code=1     |  Identifier   |           Length=6            |
+890	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+891	   |   Type=0x13   | Subtype=0x10  |
+892	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+894	   If used, this packet shall only be transmitted after both the Server
+895	   and the Client have been authenticated.  The recipient of the packet
+896	   shall respond to it as follows:
+
+898	      If the recipient of the packet does not support passphrase
+899	      requests, it shall respond with the Nak packet as per section
+900	      4.2.3.2.
+
+902	      If the recipient of the packet supports passphrase requests, it
+903	      shall respond as follows:
+904	      If authentication is not complete, the recipient of the packet
+905	      shall respond with the Failure packet as per section 4.2.5.
+906	      If authentication is complete, the recipient of the packet shall
+907	      respond with the EAP SRP-SHA256 Passphrase Response as per section
+908	      4.2.4.7.
+
+910	4.2.4.7.  EAP SRP-SHA256 Passphrase Response Packet
+
+912	   The EAP SRP-SHA256 Passphrase Response provides the passphrase,
+913	   encrypted by the common session K.  As indicated in section 4.2.4.6,
+914	   this response is only issued if authentication has successfully
+915	   completed.  The packet format is shown in Figure 14.
+
+917	   Figure 14: EAP SRP-SHA256 Passphrase Response Packet
+
+919	   :0                   1                   2                   3
+920	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+921	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+922	   | EAP Version=3 | EAPoL Type=0  |        Payload Length         |
+923	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+924	   |    Code=2     |  Identifier   |            Length             |
+925	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+926	   |   Type=0x13   | Subtype=0x10  |U|H| Reserved  |               :
+927	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+               :
+928	   :               Encrypted Passphrase (variable) ...             :
+929	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+931	   The fields in Figure 14 shall be set as follows:
+
+933	      U (1 bit): this bit shall be set to the same value as the U bit in
+934	      the validator packet transmitted by the sender (either the Client
+935	      Validator in Figure 29 or the Server Validator in Figure 30).  If
+936	      this bit is set, it indicates that the session key K is to be used
+937	      as the passphrase.  In this case, the Encrypted Passphrase field
+938	      in Figure 32 is not included in the packet.
+
+940	      H (1 bit): this bit indicates the AES key length used in the
+941	      encryption of the passphrase.  The current values are currently
+942	      limited to the following, but may be added to in the future:
+943	      H=0: 128-bit
+944	      H=1: 256-bit
+945	      Reserved (6 bits): this field shall be set to zero by the sender
+946	      and ignored by the receiver.
+
+948	      Encrypted Passphrase (variable): this field shall be set to the
+949	      encrypted passphrase, generated as follows:
+950	      Encryption algorithm: AES-CTR.
+951	      Key length: as indicated by the H bit.
+952	      Key: the first 128 or 256 bits of the session key K.
+953	      IV: Initialization Vector.  The most significant 8 bits of the IV
+954	      shall be set to the value in the Identifier field.  The remainder
+955	      of the IV shall be padded with zeros.
+
+957	   The recipient of the EAP SRP-SHA256 Passphrase Response packet shall
+958	   acknowledge its reception by sending a Success packet (see section
+959	   4.2.5) with the same Identifier as the Passphrase Response packet
+960	   being acknowledged.
+
+962	   If this protocol is to be used within an application employing an on-
+963	   the-fly passphrase change mechanism, the side responsible for
+964	   generating the passphrase may optionally send an unsolicited
+965	   Passphrase Response Packet with a new passphrase.  In such a
+966	   situation, it shall use a value for the Identifier field that is
+967	   different from the previous Passphrase Response packet.  It shall not
+968	   send a new passphrase until it starts using the passphrase from the
+969	   last Passphrase Response packet to generate the key used to encrypt
+970	   the stream.  In a multicast environment, this same side is
+971	   responsible for contacting all others that are selected to receive
+972	   the new passphrase; the details of this process are left to the
+973	   discretion of the implementer.
+
+975	4.2.4.8.  Success and Failure Packet Formats
+
+977	   Figure 15 shows the packet format for Success (code 3) and Failure
+978	   (code 4) packets.  Such packets have no additional data.  Set the
+979	   Identifier to match the value of the corresponding Request/Response
+980	   packet.
+
+982	   Figure 15: Packet Payload Format for Success/Failure Packets
+
+984	   :0                   1                   2                   3
+985	   :0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+986	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+987	   | EAP Version=3 | EAPoL Type=0  |       Payload Length=4        |
+988	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+989	   |  Code=3 or 4  |  Identifier   |           Length=4            |
+990	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+992	4.3.  Protocol Exchanges
+
+994	   This section describes the authentication protocol exchanges.  For
+995	   each exchange, the Server selects a starting value for the 8-bit
+996	   Identifier field as described in section 4.2.2, and increments this
+997	   value for each successive request.  In the protocol exchanges
+998	   presented in this section, the starting value of the Identifier field
+999	   is denoted by n.
+
+1001	   Figure 16 shows the protocol exchange for a successful authentication
+1002	   exchange.  The Client can start the process (message 1) using the
+1003	   EAPoL-Start message or any unsolicited message, such as a keep-alive
+1004	   packet.
+
+1006	   Figure 16: Protocol Exchange for Successful Authentication
+
+1008	   +----+----------------------------+---+----------------------------+
+1009	   |    |           Client           |   |           Server           |
+1010	   |    | Message      | Doc   | ID  |   | Message      | Doc   | ID  |
+1011	   +----+--------------+-------+-----+---+--------------+-------+-----+
+1012	   | 1  | EAPoL-Start  | 4.1   |     | > |              |       |     |
+1013	   | 2  |              |       |     | < | Identity Req | 4.3.1 | n   |
+1014	   | 3  | Identity Res | 4.3.1 | n   | > |              |       |     |
+1015	   | 4  |              |       |     | < | Challenge    | 4.4.3 | n+1 |
+1016	   | 5  | Client Key   | 4.4.4 | n+1 | > |              |       |     |
+1017	   | 6  |              |       |     | < | Server Key   | 4.4.4 | n+2 |
+1018	   | 7  | Client Val   | 4.4.6 | n+2 | > |              |       |     |
+1019	   | 8  |              |       |     | < | Server Val   | 4.4.7 | n+3 |
+1020	   | 9  | Success      | 4.5   | n+3 | > |              |       |     |
+1021	   +----+----------------------------+---+----------------------------+
+
+1023	   Figure 17 shows a possible protocol exchange for the case where the
+1024	   username is unknown to the Server.  Use of this protocol exchange for
+1025	   unknown usernames allows a third party to "test" whether some
+1026	   usernames exist in the Server.  If this is a concern, the protocol
+1027	   exchange shown in Figure 18 may be used instead, with the Server
+1028	   sending random data in messages 4 and 6.
+
+1030	   Figure 17: Protocol Exchange for Unknown Username
+1031	   +----+----------------------------+---+----------------------------+
+1032	   |    |           Client           |   |           Server           |
+1033	   |    | Message      | Doc   | ID  |   | Message      | Doc   | ID  |
+1034	   +----+--------------+-------+-----+---+--------------+-------+-----+
+1035	   | 1  | EAPoL-Start  | 4.1   |     | > |              |       |     |
+1036	   | 2  |              |       |     | < | Identity Req | 4.3.1 | n   |
+1037	   | 3  | Identity Res | 4.3.1 | n   | > |              |       |     |
+1038	   | 4  |              |       |     | < | Failure      | 4.5   | n   |
+1039	   +----+--------------+-------+-----+---+--------------+-------+-----+
+
+1041	   Figure 18 shows the protocol exchange when the Client authentication
+1042	   fails.  This is determined at the Server when the value carried in
+1043	   the Client Validator packet in message 7 does not match the value
+1044	   computed by the Server.  This will happen if the Client does not have
+1045	   the correct password.  This exchange can also be used when the Client
+1046	   username does not exist in the Server, with random (fake) data in
+1047	   messages 4 and 6.
+
+1049	   Figure 18: Protocol Exchange for Client Authentication Failure
+
+1051	   +----+----------------------------+---+----------------------------+
+1052	   |    |           Client           |   |           Server           |
+1053	   |    | Message      | Doc   | ID  |   | Message      | Doc   | ID  |
+1054	   +----+--------------+-------+-----+---+--------------+-------+-----+
+1055	   | 1  | EAPoL-Start  | 4.1   |     | > |              |       |     |
+1056	   | 2  |              |       |     | < | Identity Req | 4.3.1 | n   |
+1057	   | 3  | Identity Res | 4.3.1 | n   | > |              |       |     |
+1058	   | 4  |              |       |     | < | Challenge    | 4.4.3 | n+1 |
+1059	   | 5  | Client Key   | 4.4.4 | n+1 | > |              |       |     |
+1060	   | 6  |              |       |     | < | Server Key   | 4.4.4 | n+2 |
+1061	   | 7  | Client Val   | 4.4.6 | n+2 | > |              |       |     |
+1062	   | 8  |              |       |     | < | Failure      | 4.5   | n+2 |
+1063	   +----+--------------+-------+-----+---+--------------+-------+-----+
+
+1065	   Figure 18 shows the protocol exchange when the Server validation
+1066	   fails.  This will likely only happen if the Client is connecting to a
+1067	   device who is impersonating the Server.  Such a device will have no
+1068	   knowledge of the password; it can go through the steps and pretend
+1069	   they completed successfully, but at message 8, the Client detects
+1070	   that the Server validation has failed.
+
+1072	   Message 9 in Figure 19 is at the option of the Client.  If Server
+1073	   validation fails, the Client may simply stop communicating with the
+1074	   Server and may ignore all further messages from it.
+
+1076	   Figure 19: Protocol Exchange for Server Authentication Failure
+1077	   +----+----------------------------+---+----------------------------+
+1078	   |    |           Client           |   |           Server           |
+1079	   |    | Message      | Doc   | ID  |   | Message      | Doc   | ID  |
+1080	   +----+--------------+-------+-----+---+--------------+-------+-----+
+1081	   | 1  | EAPoL-Start  | 4.1   |     | > |              |       |     |
+1082	   | 2  |              |       |     | < | Identity Req | 4.3.1 | n   |
+1083	   | 3  | Identity Res | 4.3.1 | n   | > |              |       |     |
+1084	   | 4  |              |       |     | < | Challenge    | 4.4.3 | n+1 |
+1085	   | 5  | Client Key   | 4.4.4 | n+1 | > |              |       |     |
+1086	   | 6  |              |       |     | < | Server Key   | 4.4.4 | n+2 |
+1087	   | 7  | Client Val   | 4.4.6 | n+2 | > |              |       |     |
+1088	   | 8  |              |       |     | < | Server Val   | 4.4.7 | n+3 |
+1089	   | 9  | Failure      | 4.5   | n+3 | > |              |       |     |
+1090	   +----+--------------+-------+-----+---+--------------+-------+-----+
+
+1092	4.4.  Re-Authentication
+
+1094	   In some situations, it is desirable to periodically re-authenticate
+1095	   the endpoints (Server and/or Client).  If requested by the other
+1096	   endpoint, Server or Client shall respond to the re-authentication
+1097	   process described in this section.  Server and Client may support
+1098	   initiating the re-authentication process.
+
+1100	   During re-authentication, normal data exchange between Server and
+1101	   Client shall continue.  If re-authentication fails, all communication
+1102	   between Server and Client shall stop.
+
+1104	   To start re-authentication by Server request, the Server shall send
+1105	   an Identity Request packet (section 4.2.3.1) to the Client to start
+1106	   the process.  This is packet 2 in Figure 16.  The protocol will then
+1107	   follow the steps shown in Figure 16 for successful authentication, or
+1108	   Figure 17, Figure 18 or Figure 19 for authentication failures.
+
+1110	   To start re-authentication by Client request, the Client shall send
+1111	   an EAPoL-Start packet (section 4.2.2) to the Server to start the
+1112	   process.  This is packet 1 in Figure 16.  The protocol will then
+1113	   follow the steps shown in Figure 16 for successful authentication, or
+1114	   Figure 17, Figure 18 or Figure 19 for authentication failures.
+
+1116	   The re-authentication process will yield a new session key K.  If
+1117	   either the Server and/or the Client signal the use of the session key
+1118	   K as the PSK passphrase by using the U bit in the messages described
+1119	   in sections 4.2.4.6 and/or 4.2.4.7, the protocol described in section
+1120	   4.4 shall be used to switch to the new passphrase.  If Server and/or
+1121	   Client are using the session key as the PSK passphrase, they are not
+1122	   required to set the U bit in the re-authentication session; in such a
+1123	   case, the original passphrase remains in use.
+
+1125	   The interval between successive re-authentication sessions between a
+1126	   Server and a given Client shall be no less than 60 seconds.
+
+1128	4.5.  UDP Transport Considerations
+
+1130	   The protocol described in this document runs over UDP.  Therefore, it
+1131	   is possible for packets to be re-ordered, duplicated, or dropped.
+
+1133	   The authentication process is driven by the Server.  If an expected
+1134	   response is not received by a given timeout interval, the request is
+1135	   retried.  The Server shall discard duplicate responses.  After a
+1136	   certain number of retries, the Server shall discard all the
+1137	   information received and shall wait to be contacted again by the
+1138	   Client.  The number of retries is left at the discretion of the
+1139	   implementer but should be no less than three.  The timeout is also
+1140	   left at the discretion of the implementer.  It is recommended that it
+1141	   be a multiple of the round-trip time between Server and Client.
+
+1143	   As indicated in Figure 16, a successful authentication exchange
+1144	   requires four packets from the Server, and the first packet is the
+1145	   Identity Request (section 4.2.3.1).  The Client shall save the
+1146	   Identifier from that message, which we will denote by n.  The Client
+1147	   shall only respond to packets with Identifier in the range of n to
+1148	   n+3 and shall silently discard all packets with identifier values not
+1149	   in this range.  If a Client receives a packet with an identifier
+1150	   value of k, with n < k less than or equal to n+3, the Client shall
+1151	   silently discard this packet if it has yet not received the packet
+1152	   with identifier k-1.  If the last response the Client sent was for
+1153	   identifier k, with n < k less than or equal to n+3, and now the
+1154	   Client receives a packet with identifier m, with n less than or equal
+1155	   to m less than or equal to k, it shall re-send the original response
+1156	   for identifier m.  During an authentication session, the random
+1157	   Server and Client keys shall not change.  For example, if the Client
+1158	   receives a duplicate Challenge packet (message 4 in Figure 16), it
+1159	   shall re-send the same Client Key response as with the original
+1160	   request.
+
+1162	   The Client shall implement a timeout mechanism for expected messages
+1163	   from the Server, until authentication completes.  If a protocol
+1164	   message does not arrive by a given timeout interval, the Client shall
+1165	   restart the authentication process.  This timeout is left to the
+1166	   discretion of the implementer and should be a multiple of the round-
+1167	   trip time.
+
+1169	   For the Passphrase Request/Response messages in sections 4.2.4.6 and
+1170	   4.2.4.7, the sender of each message shall implement a timeout
+1171	   mechanism after each message.  If a response is not received by a
+1172	   given timeout interval, the message is retried.  After a certain
+1173	   number of retries, the sender shall abort the process.  The recovery
+1174	   mechanism in this case is left to the discretion of the implementer.
+
+1176	4.6.  Multicast Authentication (Informative)
+
+1178	   The mechanism described in this document can be used to provide
+1179	   authentication in a multicast streaming environment under the
+1180	   following conditions:
+
+1182	      When directed to an IP multicast address, while any device in the
+1183	      network can join the multicast, only authenticated devices are
+1184	      allowed to decrypt the content.
+
+1186	      Unicast bidirectional communication is possible between the sender
+1187	      and all receivers of the multicast.
+
+1189	      Receivers are configured with the multicast address and UDP port
+1190	      through external means not covered by this Specification.
+
+1192	      The sender of the stream is also the authentication Server.
+1193	      Alternatively, a separate authentication Server can be used, under
+1194	      the following conditions:
+1195	      The multicast receivers are configured with the IP address and UDP
+1196	      port of the authentication Server through external means not
+1197	      covered by this Specification.
+1198	      The authentication Server has knowledge of the passphrase in use
+1199	      to encrypt the multicast stream.
+
+1201	   Operation is as follows:
+
+1203	      The Client joins the multicast.  Since it does not have the
+1204	      passphrase yet, it cannot decrypt the content.
+
+1206	      The Client uses the source IP address and source UDP port from the
+1207	      received multicast packets to initiate an authentication session
+1208	      with the Server/sender of the content.  Alternatively, the Client
+1209	      may instead contact a pre-configured authentication Server.  The
+1210	      authentication session is initiated with an EAPoL-Start packet, as
+1211	      described in in section 4.2.2.
+
+1213	      If the authentication session finishes successfully, the receiver
+1214	      requests the PSK passphrase using the passphrase request packet
+1215	      described in section 4.2.4.6, and the Server responds with the
+1216	      passphrase response packet described in section 4.2.4.7.
+
+1218	      At this point, the Client can now decrypt the PSK stream.  The
+1219	      Client may send keep-alive unicast packets back to the sender.
+
+1221	   The re-authentication process described in section 4.4 can be used in
+1222	   this multicast environment.  As indicated in that section, the re-
+1223	   authentication can be started either by the Client or the Server.
+
+1225	   If a Client-initiated re-authentication fails, the Client shall leave
+1226	   the multicast and stop processing the data.
+
+1228	   Servers know which Clients are active due to the keep-alive messages.
+1229	   If the re-authentication fails with a subset of the receivers, the
+1230	   Server should change the PSK passphrase to remove their access.  The
+1231	   process will happen as follows:
+
+1233	      The Server generates a new passphrase through means outside this
+1234	      Specification.
+
+1236	      The Server sends the new passphrase to the subset of receivers for
+1237	      which authentication succeeded, using the passphrase response
+1238	      packet and mechanism from section 3.4.9.  For each allowed
+1239	      receiver, the session key from the new successful authentication
+1240	      will be used.
+
+1242	      Once all the allowed receivers have the new passphrase, the on-
+1243	      the-fly passphrase change mechanism from section 3.4 is used to
+1244	      switch to the new passphrase.
+
+1246	4.7.  Multi-Link Operation
+
+1248	   It is possible to use the authentication mechanism described in this
+1249	   document in a multi-link application.  In this case, there are
+1250	   multiple links between the Server and the Client.  The following
+1251	   considerations apply to multi-link operation, at the discretion of
+1252	   the implementer:
+
+1254	      One option is to run independent authentication sessions on each
+1255	      link.  Even if the same username/password is used in all links,
+1256	      the session key will be different per link.  If the session key is
+1257	      used as the passphrase, each link will have its own PSK encryption
+1258	      key.
+
+1260	      Another option is to combine the links.  In this case, it is
+1261	      recommended that GRE use is implemented, whereby the GRE sequence
+1262	      number shall be included in the packet.  The resulting combined
+1263	      and re-ordered packet flow is then used for authentication.  In
+1264	      this case, a single authentication session and passphrase will be
+1265	      used across all links.  This also allows for links to be
+1266	      dynamically added as needed at any time.
+
+1268	4.8.  Authentication Example
+
+1270	   This section provides a numerical example of an authentication
+1271	   exchange.  It is provided to allow implementations to be checked
+1272	   against known values.  In the example below, all numeric values are
+1273	   presented in base 16 (hexadecimal).  Underlined values are random
+1274	   numbers, bold values are computation results.  The example uses the
+1275	   weakest legal modulus value (512-bit) for simplicity.  Use of greater
+1276	   modulus length in actual implementations is encouraged.
+
+1278	   The inputs for the algorithm in this example are:
+
+1280	      Modulus "N": D66AAFE8E245F9AC245A199F62CE61AB8FA90A4D80C71CD2ADFD0
+1281	      B9DA163B29F2A34AFBDB3B1B5D0102559CE63D8B6E86B0AA59C14E79D4AA62D174
+1282	      8E4249DF3
+
+1284	      Generator "g": 2
+
+1286	      Username "I": rist
+
+1288	      Password "P": mainprofile
+
+1290	   The Server generates a random salt "s" for each username/password
+1291	   pair.  In this example, the following salt value is used:
+
+1293	      Salt "s":
+1294	      72F9D5383B7EB7599FB63028F47475B60A55F313D40E0BE023E026C97C0A2C32
+
+1296	   The Server computes the password verifier "v" as follows (see section
+1297	   3.1):
+
+1299	      x = SHA256(s, SHA256(I | ":" | P))
+
+1301	      v = g^x
+
+1303	   For the example inputs, the values will be:
+
+1305	      Value "x":
+1306	      8578DED647FC7E82D37886EBEF2C300EB0213CCC321D8A43A0DE2131B720C9C8
+1307	      Verifier "v": 557EA208F87A23C28936423EC16ABE6BD959933DFBEFC0B36EBD
+1308	      9335DE3997C97DDFA081D64CFBC6EFBFD5BE19F2ED9F77922FD7E88BBA6C6B310A
+1309	      9018EC4305
+
+1311	   The Server stores the salt "s" and the verifier "v" indexed by the
+1312	   username "I".  There is no need for the Server to store the password
+1313	   "P".  Once this is in place, the Server is ready to authenticate the
+1314	   Client.
+
+1316	   As illustrated in Figure 16, the Client starts the authentication
+1317	   process by sending the EAPoL-Start packet.  The Server will send the
+1318	   Identity Request packet, and the Client will respond with the
+1319	   Identity Response packet, indicating the (in this example) "rist"
+1320	   username.  The Server will then send the Challenge Request packet
+1321	   from section 4.2.4.1 containing the values "s", "g" and "N", which
+1322	   are cached by the Client.
+
+1324	   The Client generates a random number "a" between 1 and N-1.  In this
+1325	   example, the following value is used:
+
+1327	      Value "a":
+1328	      138AB4045633AD14961CB1AD0720B1989104151C0708794491113302CCCC27D5
+
+1330	   The Client uses the random value "a" to compute the Client key "A"
+1331	   using the following formula:
+
+1333	      A = g^a
+
+1335	   In this example, the Client key "A" value is computed as:
+
+1337	      Client key "A": 92C4CEFB95A1AE2E576A252B19273FD4613F44FDA4AC8CC84A
+1338	      089D5740756223943882BAD34CB55F35139CDDB60E0D19ACD2B884CFB27F53C8EA
+1339	      969269ABE014
+
+1341	   The Client key "A" is returned to the Server using the Client Key
+1342	   Response Packet from section 4.2.4.2.  The Server checks that A % N
+1343	   is not zero and caches the value "A".
+
+1345	   The Server generates a random number "b" between 1 and N-1.  In this
+1346	   example, the following value is used:
+
+1348	      Value "b"
+1349	      ED0D58FF861A1FC75A0829BEA5F1392D2B13AB2B05CBCD6ED1E71AAAD761E856
+
+1351	   The Server computes the Server key "B" as follows:
+
+1353	      k = SHA256(N, g)
+1354	      B = (kv + g^b) % N
+
+1356	   In this example, the Server key "B" is computed as follows:
+
+1358	      Value "k":
+1359	      890D0AC9E42A7F909D3CAA9A0FF115C52A1DC8DED10839EF9583C4E35EA76E78
+
+1361	      Server key "B: 85CAE0C578E6927B78BEB173FB0F9BFC8ECB4C13542BB8BE3B0
+1362	      F3447B3764A234177E22D180DCAD21F33302248B7452916DC58ABD309C8A77440A
+1363	      228B8516A4E
+
+1365	   The Server key "B" is sent to the Client using the Server Key Request
+1366	   Packet from section 4.2.4.5.  Upon receiving this value, the Client
+1367	   performs the following computations:
+
+1369	      x = SHA256(s, SHA256(I, ":", P))
+
+1371	      k = SHA256(N, g)
+
+1373	      u = SHA256(A, B)
+
+1375	      S = ((B - kg^x) ^ (a +ux)) % N
+
+1377	      K = SHA256(S)
+
+1379	      M1 = SHA256(SHA256(N) xor SHA256(g), SHA256(I, s, A, B, K))
+
+1381	   The values "x" and "k" for this example have already been computed
+1382	   and their values can be found above.  The remaining values are:
+
+1384	      Value "u":
+1385	      47BFBFEC70D89D5D9D61D52F9F446225A12C5DD7E3F55257C88772B0AEBB532A
+
+1387	      Value "S": 11426AB55E6550013743D08EB70D82F91404AA90CF0C63D8C168741
+1388	      4C2F8DC9240795EEE40BAC37C5F29B07BBAEB2C0D6CF59CFADCBACD4D93F948FB6
+1389	      2A0C96D
+
+1391	      Session key "K":
+1392	      771A81C5888B81BA1BE71C8250EC1CC2A3BA67555364F4603260BE65099C5B97
+
+1394	      Validator value "M1":
+1395	      EBFC2D79BEB3CBF7BA83C27E2B51524F8CD3F3B2C4804815AD2516D465DF80C9
+
+1397	   The Client caches the session "K" for possible future use as a
+1398	   passphrase and returns the validator value "M1" back to the Server
+1399	   using the Client Validator Response Packet from section 4.2.4.4.
+
+1401	   Upon receiving the "M1" value from the Client, the Server computes
+1402	   its own version of "K" and "M1" using the following formulas:
+
+1404	      u = SHA256(A, B)
+
+1406	      S = ((Av^u) ^ b) % N
+
+1408	      K = SHA256(S)
+
+1410	      M1 = SHA256(SHA256(N) xor SHA256(g), SHA256(I, s, A, B, K))
+
+1412	   If the "M1" value computed by the Server matches what it received
+1413	   from the Client, the Client is deemed authenticated.  In this case,
+1414	   the session key "K" will also match.  The Server computes its
+1415	   validator value "M2" as follows:
+
+1417	      M2 = SHA256(A, M1, K)
+
+1419	   For this example, the value is:
+
+1421	      Validator value "M2":
+1422	      FB14D73B5ACBBA101E5A799F80EBCBB43D83890E23DED979110EEFF109C0441A
+
+1424	5.  IANA Considerations
+
+1426	   The current document does not contain additional types or IDs for
+1427	   submission.
+
+1429	6.  Internationalization Considerations
+
+1431	   Not applicable.
+
+1433	7.  Security Considerations
+
+1435	   This entire document describes a security protocol, based upon other
+1436	   security protocols, for optional use with other security mechanisms.
+
+1438	8.  References
+
+1440	8.1.  Normative References
+
+1442	   [RFC2784]  Farinacci, D., Li, T., Hanks, S., Meyer, D., and P.
+1443	              Traina, "Generic Routing Encapsulation (GRE)", RFC 2784,
+1444	              DOI 10.17487/RFC2784, March 2000,
+1445	              <https://www.rfc-editor.org/info/rfc2784>.
+
+1447	   [RFC8086]  Yong, L., Ed., Crabbe, E., Xu, X., and T. Herbert, "GRE-
+1448	              in-UDP Encapsulation", RFC 8086, DOI 10.17487/RFC8086,
+1449	              March 2017, <https://www.rfc-editor.org/info/rfc8086>.
+
+1451	8.2.  Informative References
+
+1453	   [Video_Services_Forum]
+1454	              Video Services Forum, "Video Services Forum (VSF)
+1455	              Technical Recommendation TR-06-2:2022", 2022,
+1456	              <https://vsf.tv/download/technical_recommendations/VSF_TR-
+1457	              06-2_2022-08-11.pdf>.
+
+1459	Acknowledgements
+
+1461	   We acknowledge the editing assistance provided by John Iacovelli and
+1462	   Ciro Noronha.  The description of this protocol was originally
+1463	   published by the Videos Services Forum [Video_Services_Forum] as part
+1464	   of a technical recommendation for the RIST error correction protocol.
+
+1466	Authors' Addresses
+
+1468	   Sergio Ammirata
+1469	   SipRadius LLC.
+1470	   6810 N. State Rd. 7 Suite 246
+1471	   Coral Springs, Florida 33073
+1472	   United States of America
+1473	   Email: sergio@ammirata.net
+1474	   URI:   https://www.sipradius.com
+
+1476	   Gijs Peskens
+1477	   SipRadius LLC.
+1478	   6810 N. State Rd. 7 Suite 246
+1479	   Coral Springs, Florida 33073
+1480	   United States of America
+1481	   Email: gils@ammirata.net
+
+1483	   Brad Gilmer
+1484	   Video Services Forum
+1485	   United States of America
+1486	   Email: brad@gilmer.tv
+1487	   URI:   https://www.vsf.tv
+
+1489	   John Iacovelli (editor)
+1490	   Video Services Forum
+1491	   United States of America
+1492	   Email: john.iacovelli@gmail.com
+1493	   URI:   https://www.sipradius.com
+
+
+
+
+
+
+
+
+
