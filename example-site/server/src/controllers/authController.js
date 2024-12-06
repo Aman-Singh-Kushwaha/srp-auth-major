@@ -61,6 +61,10 @@ const initLogin = async (req, res) => {
     console.log('Login initialization request received');
     const { username } = req.body;
     
+    if (!username) {
+        return res.status(400).json({ error: 'Username is required' });
+    }
+
     try {
         // Find user
         const users = [];
@@ -76,24 +80,28 @@ const initLogin = async (req, res) => {
             console.log('User not found');
             return res.status(404).json({ error: 'User not found' });
         }
+
+        console.log('Found user:', { username: user.USERNAME, salt: user.SALT });
         
         // Generate server ephemeral
-        const v = BigInt(user.VERIFIER);
-        const serverEphemeral = srp.generateServerEphemeral(v);
+        const serverEphemeral = srp.generateServerEphemeral(user.VERIFIER);
+        console.log('Generated server ephemeral:', { 
+            publicKey: serverEphemeral.publicKey 
+        });
         
         // Store session data
         const sessionId = Math.random().toString(36).substring(2);
         srp.sessions.set(sessionId, {
             username,
             salt: user.SALT,
-            verifier: v,
-            serverPrivateEphemeral: serverEphemeral.private
+            verifier: user.VERIFIER,
+            serverPrivateEphemeral: serverEphemeral.privateKey
         });
         
         console.log('Login initialization successful');
         res.json({
             salt: user.SALT,
-            serverPublicEphemeral: serverEphemeral.public.toString(),
+            serverPublicEphemeral: serverEphemeral.publicKey,
             sessionId
         });
     } catch (error) {
@@ -106,32 +114,51 @@ const verifyLogin = (req, res) => {
     console.log('Login verification request received');
     const { sessionId, clientPublicEphemeral, clientProof } = req.body;
     
+    if (!sessionId || !clientPublicEphemeral || !clientProof) {
+        return res.status(400).json({ error: 'Missing required verification parameters' });
+    }
+
     try {
         const session = srp.sessions.get(sessionId);
         if (!session) {
             console.log('Invalid session');
             return res.status(400).json({ error: 'Invalid session' });
         }
+
+        console.log('Verifying client proof with session:', {
+            sessionId,
+            username: session.username,
+            hasVerifier: !!session.verifier
+        });
         
-        const A = BigInt(clientPublicEphemeral);
-        const B = srp.generateServerEphemeral(session.verifier).public;
-        const sharedKey = srp.computeSessionKey(
-            A, B,
-            null, session.serverPrivateEphemeral,
+        const isValid = srp.verifyClientProof(
+            clientPublicEphemeral,
+            session.serverPrivateEphemeral,
             session.verifier,
-            session.salt,
-            session.username,
-            null // password not needed on server side
+            clientProof
         );
         
-        if (sharedKey === clientProof) {
-            console.log('Login successful');
-            srp.sessions.set(sessionId, {
+        if (isValid) {
+            console.log('Login successful, updating session');
+            // Update session with authentication status and shared key
+            const updatedSession = {
                 ...session,
                 authenticated: true,
-                sharedKey
+                sharedKey: clientProof
+            };
+            srp.sessions.set(sessionId, updatedSession);
+            
+            console.log('Session updated:', {
+                sessionId,
+                username: updatedSession.username,
+                authenticated: updatedSession.authenticated
             });
-            res.json({ success: true, sharedKey });
+            
+            res.json({ 
+                success: true, 
+                sharedKey: clientProof,
+                sessionId // Send back sessionId for client to store
+            });
         } else {
             console.log('Invalid proof');
             res.status(401).json({ error: 'Invalid proof' });
@@ -144,7 +171,19 @@ const verifyLogin = (req, res) => {
 
 const getProtectedData = (req, res) => {
     const sessionId = req.headers.authorization;
+    console.log('Protected data request received:', { sessionId });
+
+    if (!sessionId) {
+        console.log('No session ID provided');
+        return res.status(401).json({ error: 'No session ID provided' });
+    }
+
     const session = srp.sessions.get(sessionId);
+    console.log('Session found:', {
+        hasSession: !!session,
+        isAuthenticated: session?.authenticated,
+        username: session?.username
+    });
     
     if (!session || !session.authenticated) {
         return res.status(401).json({ error: 'Unauthorized' });
